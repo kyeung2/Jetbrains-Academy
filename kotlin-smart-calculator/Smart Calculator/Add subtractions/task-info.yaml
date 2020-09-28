@@ -1,0 +1,118 @@
+type: edu
+custom_name: stage4
+files:
+- name: test/Test.java
+  visible: false
+  text: |
+    import calculator.MainKt;
+    import org.hyperskill.hstest.stage.StageTest;
+    import org.hyperskill.hstest.testcase.SimpleTestCase;
+
+    import java.util.Arrays;
+    import java.util.List;
+
+    public class Test extends StageTest {
+
+        public Test() {
+            super(MainKt.class);
+        }
+
+        @Override
+        public List<SimpleTestCase> generate() {
+            return Arrays.asList(
+                new SimpleTestCase(
+                    "100 + 200 - 300\n/exit",
+                    "0\nBye!"
+                ),
+                new SimpleTestCase(
+                    "4 + 6 - 8\n2 - 3 - 4\n/exit",
+                    "2\n-5\nBye!"
+                ),
+                new SimpleTestCase(
+                    "8\n\n-2 + 4 - 5 + 6\n9 +++ 10 -- 8\n3 --- 5\n14     -  12\n/exit",
+                    "8\n3\n27\n-2\n2\nBye!"
+                )
+            );
+        }
+
+    }
+  learner_created: false
+- name: src/calculator/Main.kt
+  visible: true
+  text: |-
+    package calculator
+
+    import java.util.*
+
+    fun main() {
+        SmartCalculator().start()
+    }
+
+
+    class SmartCalculator {
+
+        fun start() {
+            var exit = false
+            val scanner = Scanner(System.`in`)
+            while (!exit) {
+                when (val line = scanner.nextLine()) {
+                    "/exit" -> exit = true
+                    "/help" -> help()
+                    else -> {
+                        if (line.isNotEmpty()) {
+                            calculate(line.split(" "))
+                        }
+                    }
+                }
+            }
+            println("Bye!")
+        }
+
+        private fun help() {
+            println("The program calculates the sum of numbers\n")
+        }
+
+
+        private fun calculate(split: List<String>) {
+            var left = ""
+            var right = ""
+            var operator = ""
+            for (element in split) {
+                if (left.isEmpty()) {
+                    left = element
+                } else if (operator.isEmpty()) {
+                    operator = element
+                } else if (right.isEmpty()) {
+                    right = element
+                    left = calculate(left, right, operator)
+                    operator = ""
+                    right = ""
+                }
+            }
+            println(right)
+        }
+
+        private fun calculate(left: String, right: String, operator: String): String {
+            val a = left.toInt()
+            val b = right.toInt()
+
+            val result = when (operator) {
+                "+" -> a + b
+                "-" -> a - b
+                else -> {
+
+                    if (operator.contains("+") || operator.count { it == '-' } % 2 == 1) {
+                        a + b
+                    } else {
+                        a - b
+                    }
+                }
+            }
+
+            return result.toString()
+        }
+    }
+  learner_created: true
+feedback_link: https://hyperskill.org/projects/88/stages/489/implement
+status: Solved
+record: 4

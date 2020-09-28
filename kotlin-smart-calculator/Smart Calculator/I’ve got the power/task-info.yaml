@@ -1,0 +1,214 @@
+type: edu
+custom_name: stage7
+files:
+- name: test/Test.java
+  visible: false
+  text: |
+    import calculator.MainKt;
+    import org.hyperskill.hstest.stage.StageTest;
+    import org.hyperskill.hstest.testcase.SimpleTestCase;
+
+    import java.util.Arrays;
+    import java.util.List;
+
+    public class Test extends StageTest {
+
+        public Test() {
+            super(MainKt.class);
+        }
+
+        @Override
+        public List<SimpleTestCase> generate() {
+            return Arrays.asList(
+                /* Check simple additions and subtractions */
+                new SimpleTestCase(
+                    "4 + 6 - 8\n\n\n2 - 3 - 4\n\n8 + 7 - 4\n1 +++ 2 * 3 -- 4\n/exit",
+                    "2\n-5\n11\n11\nBye!"
+                ),
+                /* Check handling unknown commands */
+                new SimpleTestCase(
+                    "/command\n/exit",
+                    "Unknown command\nBye!"
+                ),
+                /* Check all operations */
+                new SimpleTestCase(
+                    "3 + 8 * ((4 + 3) * 2 + 1) - 6 / (2 + 1)\n/exit",
+                    "121\nBye!"
+                ),
+                /* Check with an invalid expressions */
+                new SimpleTestCase(
+                    "8 * 3 + 12 * (4 - 2)\n4 * (2 + 3\n4 + 3)\n/exit",
+                    "48\nInvalid expression\nInvalid expression\nBye!"
+                ),
+                /* Check expressions with variables */
+                new SimpleTestCase(
+                    "a = 4\nb = 5\nc = 6\na*2+b*3+c*(2+3)\n/exit",
+                    "53\nBye!"
+                ),
+                /* Check reassignment */
+                new SimpleTestCase(
+                    "a = 1\na = 2\na = 3\na\n/exit",
+                    "3\nBye!"
+                )
+            );
+        }
+    }
+  learner_created: false
+- name: src/calculator/Main.kt
+  visible: true
+  text: |-
+    package calculator
+
+    import java.lang.NumberFormatException
+    import java.util.*
+
+    fun main() {
+        SmartCalculator().start()
+    }
+
+    class SmartCalculator {
+
+        private val variables = mutableMapOf<String, String>()
+
+        fun start() {
+            var exit = false
+            val scanner = Scanner(System.`in`)
+            while (!exit) {
+                when (val line = scanner.nextLine()) {
+                    "/exit" -> exit = true
+                    "/help" -> println("The program calculates the sum of numbers")
+                    else -> {
+                        if (line.startsWith("/")) {
+                            println("Unknown command")
+                        } else if (line.isNotEmpty()) {
+                            try {
+                                val split = line.split(" ").filter { it.isNotEmpty() }
+                                if (split.size == 1 && !split[0].contains("=")) {
+                                    println(resolveVariable(split[0]) ?: "Unknown variable")
+                                } else if (split.find { it.contains("=") } != null) {
+                                    assignVariable(split)
+                                } else {
+                                    calculate(split)
+                                }
+                            } catch (e: NumberFormatException) {
+                                println("Invalid expression")
+                            }
+                        }
+                    }
+                }
+            }
+            println("Bye!")
+        }
+
+        private fun assignVariable(split: List<String>) {
+            val assignmentExpression = createAssignmentExpression(split)
+            if (assignmentExpression != null) {
+                variables[assignmentExpression[0]] = assignmentExpression[2]
+            }
+        }
+
+        private fun createAssignmentExpression(split: List<String>): List<String>? {
+            val assignmentExpression = mutableListOf<String>()
+            if (split.size == 3) {
+                assignmentExpression.add(split[0])
+                assignmentExpression.add(split[1])
+                assignmentExpression.add(split[2])
+            } else if (split.size == 1) {
+                assignmentExpression.add(split[0].substringBefore("="))
+                assignmentExpression.add("=")
+                assignmentExpression.add(split[0].substringAfter("="))
+            } else if (split.size == 2) {
+                if (split[0].contains("=")) {
+                    assignmentExpression.add(split[0].substringBefore("="))
+                    assignmentExpression.add("=")
+                    assignmentExpression.add(split[1])
+                } else if (split[1].contains("=")) {
+                    assignmentExpression.add(split[0])
+                    assignmentExpression.add("=")
+                    assignmentExpression.add(split[1].substringAfter("="))
+                }
+            }
+
+            if (assignmentExpression.size != 3) {
+                println("Invalid assignment")
+                return null
+            }
+            val variable = assignmentExpression[0]
+            if (!"[a-zA-Z]+".toRegex().matches(variable)) {
+                println("Invalid identifier")
+                return null
+            }
+            val assignmentOperator = assignmentExpression[1]
+            if (assignmentOperator != "=") {
+                println("Invalid assignment")
+                return null
+            }
+            val value = assignmentExpression[2]
+            if (!variables.containsKey(value) && !isNumber(value)) {
+                println("Invalid assignment")
+                return null
+            }
+
+            return assignmentExpression.toList()
+        }
+
+        private fun isNumber(value: String) = "\\d+".toRegex().matches(value)
+
+
+        private fun calculate(split: List<String>) {
+            var left: Int? = null
+            var right: Int? = null
+            var operator: String? = null
+            for (element in split) {
+                if (left == null) {
+                    left = resolveVariable(element)?.toInt() ?: throw NumberFormatException("Could not resolve variable")
+                } else if (operator == null) {
+                    if (!"[+-]+".toRegex().matches(element)) {
+                        throw NumberFormatException("Not a valid operator")
+                    }
+                    operator = element
+                } else if (right == null) {
+                    right = resolveVariable(element)?.toInt() ?: throw NumberFormatException("Could not resolve variable")
+                    left = calculate(left, right, operator)
+                    operator = null
+                    right = null
+                }
+            }
+            println(left)
+        }
+
+        private fun resolveVariable(element: String): String? {
+            if (isNumber(element)) {
+                return element
+            } else {
+                var variable = element
+                repeat(variables.size) {
+                    if (variables.containsKey(variable)) {
+                        val value = variables[variable]!!
+                        if (isNumber(value)) {
+                            return value
+                        }
+                        variable = value
+                    }
+                }
+                return null
+            }
+        }
+
+        private fun calculate(left: Int, right: Int, operator: String): Int =
+                when (operator) {
+                    "+" -> left + right
+                    "-" -> left - right
+                    else -> {
+                        if (operator.contains("+") || operator.count { it == '-' } % 2 == 0) {
+                            left + right
+                        } else {
+                            left - right
+                        }
+                    }
+                }
+    }
+  learner_created: true
+feedback_link: https://hyperskill.org/projects/88/stages/492/implement
+status: Solved
+record: 7

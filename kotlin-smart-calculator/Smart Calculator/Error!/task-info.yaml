@@ -1,0 +1,115 @@
+type: edu
+custom_name: stage5
+files:
+- name: test/Test.java
+  visible: false
+  text: |
+    import calculator.MainKt;
+    import org.hyperskill.hstest.stage.StageTest;
+    import org.hyperskill.hstest.testcase.SimpleTestCase;
+
+    import java.util.Arrays;
+    import java.util.List;
+
+    public class Test extends StageTest {
+
+        public Test() {
+            super(MainKt.class);
+        }
+
+        @Override
+        public List<SimpleTestCase> generate() {
+            return Arrays.asList(
+                new SimpleTestCase(
+                    "100 + 200 - 300\n/exit",
+                    "0\nBye!"
+                ),
+                new SimpleTestCase(
+                    "4 + 6 - 8\n\n\n2 - 3 - 4\n\n8 + 7 - 4\n/exit",
+                    "2\n-5\n11\nBye!"
+                ),
+                new SimpleTestCase(
+                    "abc\n123+\n+15\n18 22\n\n-22\n22-\n/exit",
+                    "Invalid expression\n" +
+                        "Invalid expression\n" +
+                        "15\n" +
+                        "Invalid expression\n" +
+                        "-22\n" +
+                        "Invalid expression\n" +
+                        "Bye!"
+                ),
+                new SimpleTestCase(
+                    "/go\n/exit",
+                    "Unknown command\nBye!"
+                )
+            );
+        }
+    }
+  learner_created: false
+- name: src/calculator/Main.kt
+  visible: true
+  text: |-
+    package calculator
+
+    import java.util.*
+
+    fun main() {
+        SmartCalculator().start()
+    }
+
+    class SmartCalculator {
+
+        fun start() {
+            var exit = false
+            val scanner = Scanner(System.`in`)
+            while (!exit) {
+                when (val line = scanner.nextLine()) {
+                    "/exit" -> exit = true
+                    "/help" -> println("The program calculates the sum of numbers")
+                    else -> {
+                        if (line.isNotEmpty()) {
+                            calculate(line.split(" ").filter { it.isNotEmpty() })
+                        }
+                    }
+                }
+            }
+            println("Bye!")
+        }
+
+        private fun calculate(split: List<String>) {
+            var left: Int? = null
+            var right: Int? = null
+            var operator: String? = null
+            for (element in split) {
+                if (left == null) {
+                    left = element.toInt()
+                } else if (operator == null) {
+                    operator = element
+                } else if (right == null) {
+                    right = element.toInt()
+                    left = calculate(left, right, operator)
+                    operator = null
+                    right = null
+                }
+            }
+            println(left)
+        }
+
+        private fun calculate(left: Int, right: Int, operator: String): Int =
+                when (operator) {
+                    "+" -> left + right
+                    "-" -> left - right
+                    else -> {
+                        if (operator.contains("+") || operator.count { it == '-' } % 2 == 0) {
+                            left + right
+                        } else {
+                            left - right
+                        }
+                    }
+                }
+
+    }
+  learner_created: true
+feedback_link: https://hyperskill.org/projects/88/stages/490/implement
+status: Solved
+record: 5
