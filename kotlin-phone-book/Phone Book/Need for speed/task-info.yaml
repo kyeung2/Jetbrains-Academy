@@ -1,0 +1,196 @@
+type: edu
+custom_name: stage3
+files:
+- name: test/PhoneBookTest.java
+  visible: false
+  text: "import org.hyperskill.hstest.stage.StageTest;\nimport org.hyperskill.hstest.testcase.CheckResult;\n\
+    import org.hyperskill.hstest.testcase.TestCase;\nimport phonebook.MainKt;\n\n\
+    import java.util.ArrayList;\nimport java.util.Arrays;\nimport java.util.List;\n\
+    import java.util.regex.Matcher;\nimport java.util.regex.Pattern;\n\npublic class\
+    \ PhoneBookTest extends StageTest {\n    public PhoneBookTest() {\n        super(MainKt.class);\n\
+    \    }\n    \n    private long timeOnTestStart;\n    \n    @Override\n    public\
+    \ List<TestCase> generate() {\n        timeOnTestStart = System.currentTimeMillis();\n\
+    \        return Arrays.asList(\n                new TestCase().setTimeLimit(30\
+    \ * 60 * 1000)\n        );\n    }\n    \n    private CheckResult checkPhrases(String\
+    \ reply, String... phrases) {\n        reply = reply.toLowerCase();\n        for\
+    \ (String phrase : phrases) {\n            if (!reply.contains(phrase.toLowerCase()))\
+    \ {\n                return CheckResult.wrong(\"Not found the part `\" + phrase\
+    \ + \"` in your output.\");\n            }\n        }\n        return CheckResult.correct();\n\
+    \    }\n    \n    private List<String> findAll(String reply, String regex) {\n\
+    \        Matcher matcher = Pattern.compile(regex).matcher(reply);\n        List<String>\
+    \ groups = new ArrayList<>();\n        while (matcher.find()) {\n            groups.add(matcher.group());\n\
+    \        }\n        return groups;\n    }\n    \n    private String timeRegex\
+    \ = \"(\\\\d+)\\\\s*min.*?(\\\\d+)\\\\s*sec.*?(\\\\d+)\\\\s*ms\";\n    private\
+    \ Pattern timeRegexPattern = Pattern.compile(timeRegex);\n    \n    private long\
+    \ parseTimestamp(String timestamp) {\n        Matcher matcher = timeRegexPattern.matcher(timestamp);\n\
+    \        if (!matcher.matches() || matcher.groupCount() < 3) {\n            throw\
+    \ new IllegalStateException(\"???Not matches the line \" + timestamp);\n     \
+    \   }\n        int min = Integer.parseInt(matcher.group(1));\n        int sec\
+    \ = Integer.parseInt(matcher.group(2));\n        int ms = Integer.parseInt(matcher.group(3));\n\
+    \        return ms + sec * 1000 + min * 1000 * 60;\n    }\n    \n    @Override\n\
+    \    public CheckResult check(String reply, Object clue) {\n        long realTime\
+    \ = System.currentTimeMillis() - timeOnTestStart;\n        \n        reply = reply.toLowerCase();\n\
+    \        \n        CheckResult res = checkPhrases(reply,\n                \"found\"\
+    ,\n                \"min.\",\n                \"sec.\",\n                \"ms.\"\
+    ,\n                \"sorting time\",\n                \"searching time\",\n  \
+    \              \"linear search\",\n                \"bubble sort\",\n        \
+    \        \"jump search\",\n                \"quick sort\",\n                \"\
+    binary search\"\n        );\n        if (!res.isCorrect()) {\n            return\
+    \ res;\n        }\n        \n        List<String> stat1 = findAll(reply, \"500\
+    \ / 500\");\n        List<String> stat2 = findAll(reply, \"500/500\");\n     \
+    \   \n        if (stat1.size() + stat2.size() < 3) {\n            return CheckResult.wrong(\"\
+    Your output should contain 3 times the phrase `500 / 500`\");\n        }\n   \
+    \     \n        List<String> timestamps = findAll(reply, timeRegex);\n       \
+    \ if (timestamps.size() != 7) {\n            return CheckResult.wrong(\"Your output\
+    \ should contain 7 timer outputs, but found \"\n                    + timestamps.size());\n\
+    \        }\n        // should not fail..\n        long t1 = parseTimestamp(timestamps.get(0));\n\
+    \        long t2 = parseTimestamp(timestamps.get(1));\n        long t3 = parseTimestamp(timestamps.get(2));\n\
+    \        long t4 = parseTimestamp(timestamps.get(3));\n        long t5 = parseTimestamp(timestamps.get(4));\n\
+    \        long t6 = parseTimestamp(timestamps.get(5));\n        long t7 = parseTimestamp(timestamps.get(6));\n\
+    \        \n        if (Math.abs(t3 + t4 - t2) > 100) {\n            return CheckResult.wrong(\"\
+    Your third and fourth timer outputs in total (sorting and searching) \" +\n  \
+    \                  \"should be equal to the second (total search time).\");\n\
+    \        }\n        if (Math.abs(t6 + t7 - t5) > 100) {\n            return CheckResult.wrong(\"\
+    Your 6-th and 7-th timer outputs in total (sorting and searching) \" +\n     \
+    \               \"should be equal to the 5-th (total search time).\");\n     \
+    \   }\n        \n        long estimatedTime = t1 + t2 + t5;\n        if (realTime\
+    \ < 1000) {\n            return CheckResult.wrong(\"Your program completes too\
+    \ fast. Faster than a second!\");\n        }\n        \n        if (Math.abs(estimatedTime\
+    \ - realTime) > estimatedTime * 0.3) {\n            return CheckResult.wrong(\"\
+    Your estimated time is not similar to real time the program works. \" +\n    \
+    \                \"Real time: \" + realTime + \"ms, estimated time: \" + estimatedTime\
+    \ + \"ms\");\n        }\n        \n        return CheckResult.correct();\n   \
+    \ }\n}\n"
+  learner_created: false
+- name: src/phonebook/Main.kt
+  visible: true
+  text: |-
+    package phonebook
+
+    import java.io.File
+    import java.time.Duration
+    import kotlin.math.sqrt
+
+    fun main() {
+        val directory = File("/Users/kye/Desktop/directory.txt")
+        val names = File("/Users/kye/Desktop/find.txt")
+        PhoneBook(directory.readLines()).search(names.readLines())
+    }
+
+    data class Record(val number: Int, val name: String)
+
+    class PhoneBook(directory: List<String>) {
+
+        private val records: MutableList<Record>
+
+        init {
+            records = directory
+                    .map { line ->
+                        val split = line.split(" ", limit = 2)
+                        Record(split[0].toInt(), split[1])
+                    }.toMutableList()
+        }
+
+        fun search(names: List<String>) {
+
+            val (linearSearchDuration, linearFound) = timedSearch(records, names, this::linearSearch)
+            println("Start searching (linear search)...")
+            println("Found $linearFound / 500 entries. Time taken: ${linearSearchDuration.toMinutesPart()} min. ${linearSearchDuration.toSecondsPart()} sec. ${linearSearchDuration.toMillisPart()} ms.")
+            println("Start searching (bubble sort + jump search)...")
+
+            val sortedRecords = records.toMutableList()
+            val (bubbleSortDuration, successful) = bubbleSort(sortedRecords, linearSearchDuration.multipliedBy(10))
+            if (successful) {
+
+                val (jumpSearchDuration, jumpFound) = timedSearch(sortedRecords, names, this::jumpSearch)
+                println("Found $jumpFound / 500 entries. Time taken: ${jumpSearchDuration.toMinutesPart()} min. ${jumpSearchDuration.toSecondsPart()} sec. ${jumpSearchDuration.toMillisPart()} ms.")
+                println("Sorting time: 8 min. 45 sec. 251 ms.")
+                println("Searching time: 0 min. 30 sec. 40 ms.")
+            } else {
+
+                val (linearDuration, _) = timedSearch(records, names, this::linearSearch)
+                println("Sorting time: ${bubbleSortDuration.toMinutesPart()} min. ${bubbleSortDuration.toSecondsPart()} sec. ${bubbleSortDuration.toMillisPart()} ms. - STOPPED, moved to linear search")
+                println("Searching time: ${linearDuration.toMinutesPart()} min. ${linearDuration.toSecondsPart()} sec. ${linearDuration.toMillisPart()} ms.")
+            }
+        }
+
+        private fun timedSearch(records: MutableList<Record>, names: List<String>, searchAlgorithm: (records: MutableList<Record>, name: String) -> Boolean): Pair<Duration, Int> {
+            val start = System.currentTimeMillis()
+            val found = names.filter { searchAlgorithm(records, it) }.count()
+            return Pair(duration(start), found)
+        }
+
+        private fun bubbleSort(records: MutableList<Record>, timeLimit: Duration): Pair<Duration, Boolean> {
+            val start = System.currentTimeMillis()
+            for (i in 0 until records.size) {
+                for (j in 0 until records.size - i - 1) {
+
+                    if (records[j].name > records[j + 1].name) {
+
+                        val tempRecord = records[j]
+                        records[j] = records[j + 1]
+                        records[j + 1] = tempRecord
+                    }
+                }
+                // adding to outer loop to not create too many Duration objects.
+                val currentDuration = duration(start)
+                if (currentDuration > timeLimit) {
+                    return Pair(currentDuration, false)
+                }
+            }
+            return Pair(duration(start), true)
+        }
+
+        private fun linearSearch(records: MutableList<Record>, name: String): Boolean =
+                records.firstOrNull { it.name == name } != null
+
+        private fun jumpSearch(sortedRecords: MutableList<Record>, name: String): Boolean {
+            val blockSize = sqrt(sortedRecords.size.toDouble()).toInt()
+            var previous = 0
+            for (i in blockSize until sortedRecords.size step blockSize) {
+                if (blockContains(previous, i, sortedRecords, name)) {
+                    return true
+                }
+                previous = i
+            }
+
+            return blockContains(previous, sortedRecords.size - 1, sortedRecords, name)
+        }
+
+        private fun blockContains(blockStart: Int, blockEnd: Int, sortedRecords: MutableList<Record>, name: String): Boolean {
+
+            if (sortedRecords[blockEnd].name == name) {
+                return true
+            } else if (sortedRecords[blockEnd].name < name) {
+
+                for (j in blockEnd downTo blockStart) {
+                    if (sortedRecords[j].name == name) {
+                        return true
+                    }
+                }
+            }
+
+            return false
+        }
+
+        private fun duration(start: Long): Duration {
+            return Duration.ofMillis(System.currentTimeMillis() - start)
+        }
+
+    }
+  learner_created: true
+- name: src/phonebook/Search.kt
+  visible: true
+  learner_created: true
+- name: src/phonebook/Sort.kt
+  visible: true
+  learner_created: true
+- name: src/phonebook/PhoneBook.kt
+  visible: true
+  learner_created: true
+- name: src/phonebook/Utilities.kt
+  visible: true
+  learner_created: true
+feedback_link: https://hyperskill.org/projects/86/stages/478/implement
+status: Solved
+record: 1

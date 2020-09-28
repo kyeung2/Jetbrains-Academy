@@ -1,0 +1,80 @@
+type: edu
+custom_name: stage2
+files:
+- name: test/PhoneBookTest.java
+  visible: false
+  text: |
+    import org.hyperskill.hstest.v6.stage.BaseStageTest;
+    import org.hyperskill.hstest.v6.testcase.CheckResult;
+    import org.hyperskill.hstest.v6.testcase.TestCase;
+    import phonebook.MainKt;
+
+    import java.util.Arrays;
+    import java.util.List;
+
+    public class PhoneBookTest extends BaseStageTest {
+        public PhoneBookTest() {
+            super(MainKt.class);
+        }
+
+        @Override
+        public List<TestCase> generate() {
+            return Arrays.asList(
+                new TestCase().setTimeLimit(30 * 60 * 1000)
+            );
+        }
+
+        @Override
+        public CheckResult check(String reply, Object clue) {
+            reply = reply.toLowerCase();
+            return new CheckResult(
+                reply.contains("start searching")
+                    && reply.contains("found")
+                    && reply.contains("min.")
+                    && reply.contains("sec.")
+                    && reply.contains("ms.")
+                    && reply.contains("sorting time")
+                    && reply.contains("searching time")
+                    && reply.contains("linear search")
+                    && reply.contains("bubble sort")
+                    && reply.contains("jump search"));
+        }
+    }
+  learner_created: false
+- name: src/phonebook/Main.kt
+  visible: true
+  text: |
+    package phonebook
+
+    import java.io.File
+    import java.util.concurrent.TimeUnit
+
+    fun main() {
+        val directory = File("/Users/kye/Desktop/directory.txt")
+        val terms = File("/Users/kye/Desktop/find.txt")
+
+        val directoryLines = directory.readLines()
+        val start = System.currentTimeMillis()
+        val found = terms.readLines().filter { findLinear(directoryLines, it) }.count()
+        val end = System.currentTimeMillis()
+        val duration = end - start
+        val minutesComponent = TimeUnit.MILLISECONDS.toMinutes(duration)
+        val minutesInMills = TimeUnit.MINUTES.toMillis(minutesComponent)
+        val secondsComponent = TimeUnit.MILLISECONDS.toSeconds(duration - minutesInMills )
+        val secondsInMills = TimeUnit.SECONDS.toMillis(secondsComponent)
+        val millsComponent = duration - minutesInMills - secondsInMills
+
+        println("""
+            Start searching...
+            Found $found / 500 entries. Time taken: $minutesComponent min. $secondsComponent sec. $millsComponent ms.
+        """.trimIndent())
+
+    }
+
+
+    fun findLinear(directoryLines: List<String>, term: String): Boolean =
+            directoryLines.firstOrNull { it.contains(term) } != null
+  learner_created: true
+feedback_link: https://hyperskill.org/projects/86/stages/477/implement
+status: Solved
+record: 1
